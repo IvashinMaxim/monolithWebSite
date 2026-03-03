@@ -20,7 +20,8 @@ target/
 *.ipr
 
 application.yml
-static/images
+src/main/resources/static/images
+archive
 
 ### NetBeans ###
 /nbproject/private/
