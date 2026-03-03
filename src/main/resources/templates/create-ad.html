@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Создание объявления</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        .form-section {
+            background-color: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            border-bottom: 2px solid #0d6efd;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            color: #0d6efd;
+        }
+
+        .image-upload {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+
+        .image-upload:hover {
+            border-color: #0d6efd;
+            background-color: #f0f8ff;
+        }
+
+        .image-preview {
+            max-width: 100%;
+            max-height: 200px;
+            margin-top: 15px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/header.html :: header}"></div>
+
+<div class="container my-5">
+    <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <span th:text="${successMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${errorMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <h1 class="mb-4">Создание нового объявления</h1>
+
+            <form th:action="@{/ads/create}" th:object="${ad}" method="post" enctype="multipart/form-data"
+                  class="needs-validation" novalidate>
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+                <div class="form-section">
+                    <h3 class="section-title"><i class="bi bi-geo-alt"></i> Местоположение и Описание</h3>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="region" class="form-label">Регион *</label>
+                            <input type="text" class="form-control" id="region" th:field="*{region}" required
+                                   placeholder="Например: Московская обл.">
+                            <div class="invalid-feedback" th:errors="*{region}"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="city" class="form-label">Город *</label>
+                            <input type="text" class="form-control" id="city" th:field="*{city}" required
+                                   placeholder="Например: Москва">
+                            <div class="invalid-feedback" th:errors="*{city}"></div>
+                        </div>
+
+                        <div class="col-md-12">
+                            <label for="title" class="form-label">Заголовок объявления</label>
+                            <input type="text" class="form-control" id="title" th:field="*{title}"
+                                   th:classappend="${#fields.hasErrors('title')} ? 'is-invalid'" required>
+                            <div class="invalid-feedback" th:errors="*{title}"></div>
+                        </div>
+                        <div class="col-md-12">
+                            <label for="description" class="form-label">Описание</label>
+                            <textarea class="form-control" id="description" th:field="*{description}" rows="2"
+                                      required></textarea>
+                            <div class="invalid-feedback" th:errors="*{description}"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="section-title"><i class="bi bi-car-front"></i> Характеристики автомобиля</h3>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Марка</label>
+                            <select id="brand" class="form-select" th:field="*{car.brand}" onchange="loadModels()">
+                                <option value="">Выберите марку</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Модель</label>
+                            <select id="model" class="form-select" th:field="*{car.model}" onchange="loadYears()"
+                                    disabled>
+                                <option value="">Сначала выберите марку</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Год выпуска</label>
+                            <select id="year" class="form-select" th:field="*{car.yearLow}"
+                                    onchange="loadGenerationAndBodyTypes()" disabled>
+                                <option value="">Сначала выберите модель</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Поколение</label>
+                            <select id="generation" class="form-select" th:field="*{car.generation}"
+                                    onchange="loadBodyTypes()" disabled>
+                                <option value="">Сначала выберите год</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Цвет</label>
+                            <select id="color" class="form-select" th:field="*{color}" disabled>
+                                <option value="">Выберите цвет</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Кузов</label>
+                            <select id="bodyType" class="form-select" th:field="*{car.bodyType}"
+                                    onchange="loadEngineTypes()" disabled>
+                                <option value="">Сначала выберите поколение</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Тип двигателя</label>
+                            <select id="engineType" class="form-select" th:field="*{car.engineType}"
+                                    onchange="loadEngineDetails()" disabled>
+                                <option value="">Сначала выберите кузов</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Мощность (л.с.) *</label>
+                            <select id="enginePowerSelect"
+                                    class="form-select"
+                                    th:field="*{car.enginePower}"
+                                    onchange="loadEngineVolumes()"
+                                    disabled>
+                            </select>
+
+
+                        </div>
+
+                        <div class="col-md-2">
+                            <label class="form-label">Объем (л)</label>
+                            <select id="engineVolume"
+                                    class="form-select"
+                                    th:field="*{car.engineVolume}"
+                                    onchange="loadTransmissions()"
+                                    disabled>
+                            </select>
+
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Коробка передач</label>
+                            <select id="transmissionType" class="form-select" th:field="*{car.transmission}"
+                                    onchange="loadDriveTypes()" disabled>
+                                <option value="">Сначала выберите двигатель</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Привод</label>
+                            <select id="driveType" class="form-select" th:field="*{car.driveType}"
+                                    onchange="loadSteeringSides()" disabled>
+                                <option value="">Сначала выберите коробку</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Руль</label>
+                            <select id="steeringSide" class="form-select" th:field="*{car.steeringSide}" disabled>
+                                <option value="">Сначала выберите привод</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="mileage" class="form-label">Пробег (км) *</label>
+                            <input type="number" class="form-control" id="mileage" th:field="*{mileage}"
+                                   th:classappend="${#fields.hasErrors('mileage')} ? 'is-invalid'"
+                                   placeholder="Например: 75000" required>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('mileage')}"
+                                 th:errors="*{mileage}"></div>
+                        </div>
+
+                        <div class="col-md-6">
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="section-title"><i class="bi bi-currency-exchange"></i> Цена и изображения</h3>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="price" class="form-label">Цена ($) *</label>
+                            <div class="input-group">
+                                <input type="number" step="0.01" class="form-control" id="price" th:field="*{price}"
+                                       th:classappend="${#fields.hasErrors('price')} ? 'is-invalid'"
+                                       placeholder="Например: 15000" required>
+                                <span class="input-group-text">$</span>
+                            </div>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('price')}"
+                                 th:errors="*{price}"></div>
+                        </div>
+
+                        <div class="col-md-12">
+                            <label class="form-label">Фотографии автомобиля</label>
+
+                            <div id="selectedImagesContainer" class="row g-2 mb-2"></div>
+
+                            <div class="image-upload" onclick="document.getElementById('imageInput').click()"
+                                 style="border: 2px dashed #ccc; padding: 20px; text-align: center; cursor: pointer;">
+                                <i class="bi bi-cloud-arrow-up" style="font-size: 2rem;"></i>
+                                <p class="mt-2">Перетащите сюда файлы или нажмите для загрузки</p>
+                                <p class="text-muted small">Вы можете выбрать сразу несколько фото</p>
+
+                            </div>
+
+                            <input type="file" id="imageInput" name="images" multiple accept="image/*"
+                                   style="display: none;">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <a th:href="@{/ads}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Назад к объявлениям
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> Создать объявление
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API = "/api/v1/ads/dictionary";
+
+    let selectedFiles = [];
+
+    const imageInput = document.getElementById('imageInput');
+    const container = document.getElementById('selectedImagesContainer');
+
+    imageInput.addEventListener('change', function(e) {
+        const files = Array.from(e.target.files);
+
+        files.forEach(file => {
+            selectedFiles.push(file);
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const div = document.createElement('div');
+                div.className = 'col-4 col-md-2 position-relative mb-2';
+                div.innerHTML = `
+                <div class="card h-100">
+                    <img src="${event.target.result}" class="card-img-top object-fit-cover" style="height: 100px;">
+                    <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 p-0 px-1"
+                            onclick="removeNewFile(this, '${file.name}', ${file.size})">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+            `;
+                container.appendChild(div);
+            };
+            reader.readAsDataURL(file);
+        });
+
+        updateInputFiles();
+    });
+
+    function removeNewFile(button, fileName, fileSize) {
+        selectedFiles = selectedFiles.filter(f => !(f.name === fileName && f.size === fileSize));
+
+        button.closest('.col-4').remove();
+
+        updateInputFiles();
+    }
+
+    function updateInputFiles() {
+        const dataTransfer = new DataTransfer();
+        selectedFiles.forEach(file => dataTransfer.items.add(file));
+        imageInput.files = dataTransfer.files;
+    }
+
+    function fetchDict(target, params = {}) {
+        const url = new URL(API, window.location.origin);
+        url.searchParams.set("target", target);
+
+        Object.entries(params).forEach(([k, v]) => {
+            if (v) url.searchParams.set(k, v);
+        });
+
+        return fetch(url)
+            .then(r => r.json())
+            .catch(err => {
+                console.error("Ошибка запроса:", err);
+                return [];
+            });
+    }
+
+    function fillSelect(id, list, placeholder) {
+        const select = document.getElementById(id);
+        select.innerHTML = "";
+
+        const base = document.createElement("option");
+        base.value = "";
+        base.textContent = placeholder;
+        select.appendChild(base);
+
+        list.forEach(item => {
+            const o = document.createElement("option");
+            o.value = item;
+            o.textContent = item;
+            select.appendChild(o);
+        });
+
+        select.disabled = list.length === 0;
+    }
+
+    async function loadBrands() {
+        const brands = await fetchDict("brand");
+        fillSelect("brand", brands, "Выберите марку");
+    }
+
+    async function loadModels() {
+        const brand = document.getElementById("brand").value;
+
+        fillSelect("model", [], "Выберите модель");
+        fillSelect("year", [], "Выберите год");
+        fillSelect("generation", [], "Выберите поколение");
+        fillSelect("bodyType", [], "Выберите кузов");
+        fillSelect("engineType", [], "Выберите двигатель");
+        fillSelect("enginePowerSelect", [], "Сначала выберите тип двигателя");
+        fillSelect("engineVolume", [], "—");
+        fillSelect("transmissionType", [], "Выберите коробку");
+        fillSelect("driveType", [], "Выберите привод");
+        fillSelect("steeringSide", [], "Выберите руль");
+
+        if (!brand) return;
+
+        const models = await fetchDict("model", {brand});
+        fillSelect("model", models, "Выберите модель");
+    }
+
+    async function loadYears() {
+        const brand = document.getElementById("brand").value;
+        const model = document.getElementById("model").value;
+
+        fillSelect("year", [], "Выберите год");
+        fillSelect("generation", [], "Выберите поколение");
+
+        fillSelect("bodyType", [], "Выберите кузов");
+        fillSelect("engineType", [], "Выберите двигатель");
+        fillSelect("enginePowerSelect", [], "Сначала выберите тип двигателя");
+        fillSelect("engineVolume", [], "—");
+        fillSelect("transmissionType", [], "Выберите коробку");
+        fillSelect("driveType", [], "Выберите привод");
+        fillSelect("steeringSide", [], "Выберите руль");
+
+        if (!brand || !model) return;
+
+        const years = await fetchDict("yearLow", {brand, model});
+        fillSelect("year", years, "Выберите год");
+    }
+
+    async function loadGenerationAndBodyTypes() {
+        const brand = document.getElementById("brand").value;
+        const model = document.getElementById("model").value;
+        const yearLow = document.getElementById("year").value;
+
+        fillSelect("generation", [], "Выберите поколение");
+        fillSelect("color", [], "Выберите цвет");
+        fillSelect("bodyType", [], "Выберите кузов");
+        fillSelect("engineType", [], "Выберите двигатель");
+        fillSelect("enginePowerSelect", [], "Сначала выберите тип двигателя");
+        fillSelect("engineVolume", [], "—");
+        fillSelect("transmissionType", [], "Выберите коробку");
+        fillSelect("driveType", [], "Выберите привод");
+        fillSelect("steeringSide", [], "Выберите руль");
+
+
+        if (!brand || !model || !yearLow) return;
+
+        await loadGeneration(brand, model, yearLow);
+        await loadColors(brand, model, yearLow);
+    }
+
+    async function loadGeneration(brand, model, yearLow) {
+        const list = await fetchDict("generation", {brand, model, yearLow});
+        const stringList = list.map(String);
+        fillSelect("generation", stringList, "Выберите поколение");
+    }
+
+    async function loadColors(brand, model, yearLow) {
+        const list = await fetchDict("color", {brand, model, yearLow});
+        fillSelect("color", list, "Выберите цвет");
+    }
+
+    async function loadBodyTypes() {
+        const brand = document.getElementById("brand").value;
+        const model = document.getElementById("model").value;
+        const yearLow = document.getElementById("year").value;
+        const generation = document.getElementById("generation").value;
+
+        fillSelect("bodyType", [], "Выберите кузов");
+        fillSelect("engineType", [], "Выберите двигатель");
+        fillSelect("enginePowerSelect", [], "Сначала выберите тип двигателя");
+        fillSelect("engineVolume", [], "—");
+        fillSelect("transmissionType", [], "Выберите коробку");
+        fillSelect("driveType", [], "Выберите привод");
+        fillSelect("steeringSide", [], "Выберите руль");
+
+        if (!brand || !model || !yearLow || !generation) return;
+
+        const list = await fetchDict("bodyType", {brand, model, yearLow, generation});
+        fillSelect("bodyType", list, "Выберите кузов");
+    }
+
+    async function loadEngineTypes() {
+        const brand = document.getElementById("brand").value;
+        const model = document.getElementById("model").value;
+        const yearLow = document.getElementById("year").value;
+        const bodyType = document.getElementById("bodyType").value;
+
+        fillSelect("engineType", [], "Выберите двигатель");
+        fillSelect("enginePowerSelect", [], "Сначала выберите тип двигателя");
+        fillSelect("engineVolume", [], "—");
+        fillSelect("transmissionType", [], "Выберите коробку");
+        fillSelect("driveType", [], "Выберите привод");
+        fillSelect("steeringSide", [], "Выберите руль");
+
+        if (!brand || !model || !yearLow || !bodyType) return;
+
+        const list = await fetchDict("engineType", {brand, model, yearLow, bodyType});
+        fillSelect("engineType", list, "Выберите двигатель");
+    }
+
+    async function loadEngineDetails() {
+        const brand = document.getElementById("brand").value;
+        const model = document.getElementById("model").value;
+        const yearLow = document.getElementById("year").value;
+        const generation = document.getElementById("generation").value;
+        const bodyType = document.getElementById("bodyType").value;
+        const engineType = document.getElementById("engineType").value;
+
+        fillSelect("enginePowerSelect", [], "Выберите мощность");
+        fillSelect("engineVolume", [], "—");
+        fillSelect("transmissionType", [], "Выберите коробку");
+        fillSelect("driveType", [], "Выберите привод");
+        fillSelect("steeringSide", [], "Выберите руль");
+
+
+        if (!brand || !model || !yearLow || !bodyType || !engineType) return;
+
+        const commonParams = {brand, model, yearLow, generation, bodyType, engineType};
+
+        const powerList = await fetchDict("enginePower", commonParams);
+        fillSelect(
+            "enginePowerSelect",
+            powerList.map(String),
+            "Выберите мощность (л.с.)"
+        );
+    }
+
+    async function loadEngineVolumes() {
+        const brand = document.getElementById("brand").value;
+        const model = document.getElementById("model").value;
+        const yearLow = document.getElementById("year").value;
+        const generation = document.getElementById("generation").value;
+        const bodyType = document.getElementById("bodyType").value;
+        const engineType = document.getElementById("engineType").value;
+        const enginePower = document.getElementById("enginePowerSelect").value;
+
+        fillSelect("engineVolume", [], "Выберите объем");
+        fillSelect("transmissionType", [], "Выберите коробку");
+        fillSelect("driveType", [], "Выберите привод");
+        fillSelect("steeringSide", [], "Выберите руль");
+
+        if (!enginePower) return;
+
+        const params = {
+            brand, model, yearLow, generation, bodyType, engineType, enginePower
+        };
+
+        const volumeList = await fetchDict("engineVolume", params);
+        fillSelect(
+            "engineVolume",
+            volumeList.map(String),
+            "Выберите объем"
+        );
+    }
+
+
+
+    async function loadTransmissions() {
+        const brand = document.getElementById("brand").value;
+        const model = document.getElementById("model").value;
+        const yearLow = document.getElementById("year").value;
+        const generation = document.getElementById("generation").value;
+        const bodyType = document.getElementById("bodyType").value;
+        const engineType = document.getElementById("engineType").value;
+        const enginePower = document.getElementById("enginePowerSelect").value;
+        const engineVolume = document.getElementById("engineVolume").value;
+
+        fillSelect("transmissionType", [], "Выберите коробку");
+        fillSelect("driveType", [], "Выберите привод");
+        fillSelect("steeringSide", [], "Выберите руль");
+
+        if (!brand || !model || !yearLow || !engineType || !enginePower) return;
+
+        const params = {brand, model, yearLow, generation, bodyType, engineType, enginePower};
+        if (engineVolume) {
+            params.engineVolume = engineVolume;
+        }
+
+        const list = await fetchDict("transmission", params);
+        fillSelect("transmissionType", list, "Выберите коробку");
+    }
+
+    async function loadDriveTypes() {
+        const brand = document.getElementById("brand").value;
+        const model = document.getElementById("model").value;
+        const yearLow = document.getElementById("year").value;
+        const transmissionType = document.getElementById("transmissionType").value;
+
+        fillSelect("driveType", [], "Выберите привод");
+        fillSelect("steeringSide", [], "Выберите руль");
+
+        if (!brand || !model || !yearLow || !transmissionType) return;
+
+        const list = await fetchDict("driveType", {brand, model, yearLow, transmissionType});
+        fillSelect("driveType", list, "Выберите привод");
+    }
+
+    async function loadSteeringSides() {
+        const brand = document.getElementById("brand").value;
+        const model = document.getElementById("model").value;
+        const yearLow = document.getElementById("year").value;
+        const transmissionType = document.getElementById("transmissionType").value;
+        const driveType = document.getElementById("driveType").value;
+
+        fillSelect("steeringSide", [], "Выберите руль");
+
+        if (!brand || !model || !yearLow || !transmissionType || !driveType) return;
+
+        const list = await fetchDict("steeringSide", {
+            brand, model, yearLow, transmissionType, driveType
+        });
+        fillSelect("steeringSide", list, "Выберите руль");
+    }
+
+    document.addEventListener("DOMContentLoaded", loadBrands);
+</script>
+
+<script>
+    function previewImage(event) {
+        const input = event.target;
+        const preview = document.getElementById('imagePreview');
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    document.querySelector('form').addEventListener('submit', function (event) {
+        if (!this.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        this.classList.add('was-validated');
+    });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
